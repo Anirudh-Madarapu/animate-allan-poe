@@ -1,4 +1,4 @@
-// src/App.jsx
+// === src/App.jsx ===
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -7,33 +7,44 @@ import "./style.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
+afterStartAnimations();
+
 export default function App() {
   const [started, setStarted] = useState(false);
-  const horizontalRefs = useRef([]); // hold refs for multiple horizontal sections if needed
+  const horizontalRefs = useRef([]);
 
   useEffect(() => {
     if (!started) return;
 
-    // ----- CAPTION FADE‑IN FOR EVERY SECTION -----
+    // CAPTION WORD‑BY‑WORD FLOW
     gsap.utils.toArray(".section-caption").forEach((cap) => {
-      gsap.from(cap, {
-        opacity: 0,
-        y: 40,
-        duration: 1,
-        ease: "power2.out",
-        scrollTrigger: {
-          trigger: cap,
-          start: "top 80%",
-          toggleActions: "play none none reverse",
-        },
-      });
+      // Split caption text into word spans for staggered animation
+      const words = cap.textContent.trim().split(/\s+/);
+      cap.innerHTML = words.map((w) => `<span class=\"word\">${w}&nbsp;</span>`).join("");
+
+      gsap.fromTo(
+        cap.querySelectorAll(".word"),
+        { opacity: 0, y: 20 },
+        {
+          opacity: 1,
+          y: 0,
+          stagger: 0.07,
+          duration: 0.45,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: cap,
+            start: "top 80%",
+            toggleActions: "play none none reverse",
+          },
+        }
+      );
     });
 
-    // ----- HORIZONTAL SCROLL SECTIONS -----
+    // HORIZONTAL PANELS
     horizontalRefs.current.forEach((container) => {
       const panels = gsap.utils.toArray(".panel", container);
+      if (panels.length < 2) return;
       gsap.set(container, { width: `${panels.length * 100}%` });
-
       gsap.to(panels, {
         xPercent: -100 * (panels.length - 1),
         ease: "none",
@@ -51,22 +62,19 @@ export default function App() {
     ScrollTrigger.refresh();
   }, [started]);
 
-  // ----- START SCREEN -----
+  // START SCREEN
   const StartScreen = () => (
     <div className="start-screen">
       <h1 className="story-title">The Black Cat</h1>
-      <p className="story-tagline">
-        “Yet, mad am I not—and very surely do I not dream.”
-      </p>
+      <p className="story-tagline">“Yet, mad am I not—and very surely do I not dream.”</p>
       <button className="begin-button" onClick={() => setStarted(true)}>
         Begin the Story
       </button>
     </div>
   );
 
-  // ----- RENDER SECTIONS FROM DATA -----
+  // RENDER SCENES
   const renderScene = (scene, idx) => {
-    // Horizontal group
     if (scene.panels && scene.panels.length > 1) {
       return (
         <section className="story-section horizontal" key={`h-${idx}`}>
@@ -89,9 +97,7 @@ export default function App() {
       );
     }
 
-    // Vertical scene with split layout (image + text)
-    const imgFirst = idx % 2 === 0; // alternate image side
-
+    const imgFirst = idx % 2 === 0;
     return (
       <section className="story-section vertical" key={`v-${idx}`}>        
         <div className={`scene-inner ${imgFirst ? "row" : "row reverse"}`}>
@@ -111,12 +117,16 @@ export default function App() {
 
   return (
     <div className="app-container">
+      <div className="fog" /> {/* global moving fog layer */}
       {!started && <StartScreen />}
-      {started && (
-        <main className="story-container">
-          {storyData.map((scene, idx) => renderScene(scene, idx))}
-        </main>
-      )}
+      {started && <main className="story-container">{storyData.map(renderScene)}</main>}
     </div>
   );
 }
+
+function afterStartAnimations() {
+  // Ensure ScrollTrigger/GSAP loaded before any rendering if needed
+}
+
+// === src/style.css ===
+/* Global */
